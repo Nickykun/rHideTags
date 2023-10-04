@@ -11,6 +11,11 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
+import me.clip.placeholderapi.PlaceholderAPI;
+import net.md_5.bungee.api.ChatColor;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class Core extends JavaPlugin implements Listener {
 
@@ -48,8 +53,24 @@ public final class Core extends JavaPlugin implements Listener {
     public void onInteract(PlayerInteractAtEntityEvent e) {
         if (!(e.getRightClicked() instanceof Player)) return;
 
+        Player player = (Player) e.getRightClicked();
+        String messageWithPlaceholders = PlaceholderAPI.setPlaceholders(player, message);
+        String coloredMessage = ChatColor.translateAlternateColorCodes('&', messageWithPlaceholders);
+        coloredMessage = translateHexColorCodes("&#", "", coloredMessage);
+
         e.getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR,
-                TextComponent.fromLegacyText(message.replace("$name", ((Player) e.getRightClicked()).getDisplayName())));
+                TextComponent.fromLegacyText(coloredMessage.replace("$name", player.getDisplayName())));
+    }
+
+    private String translateHexColorCodes(String startTag, String endTag, String message) {
+        final Pattern hexPattern = Pattern.compile(startTag + "([A-Fa-f0-9]{6})" + endTag);
+        Matcher matcher = hexPattern.matcher(message);
+        StringBuffer buffer = new StringBuffer(message.length() + 4 * 8);
+        while (matcher.find()) {
+            String group = matcher.group(1);
+            matcher.appendReplacement(buffer, ChatColor.of('#' + group).toString());
+        }
+        return matcher.appendTail(buffer).toString();
     }
 
     private void hideName(Player p) {
